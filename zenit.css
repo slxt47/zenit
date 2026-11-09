@@ -1,5 +1,6 @@
 /* Zenit (time.slxt.org) – slxt-Design: Glas-Knöpfe, Violett→Blau. Hell/Dunkel betrifft nur Knöpfe und Fenster. */
 :root {
+  --ablage-platz: 150px;   /* Uhr rückt über die untere Glasfläche */
   --glas: rgba(255, 255, 255, .62);
   --glas-rand: rgba(255, 255, 255, .7);
   --text: #1b1838;
@@ -9,6 +10,8 @@
   --feld: rgba(255, 255, 255, .85);
   --schatten: 0 8px 30px rgba(10, 14, 40, .18);
   --fokus: #6d4aff;
+  --glas-dick: rgba(255, 255, 255, .8);     /* dickes Material für Text (HIG Materials) */
+  --chip: rgba(30, 20, 60, .07);
   color-scheme: light;
 }
 :root[data-modus="dunkel"] {
@@ -21,6 +24,8 @@
   --feld: rgba(255, 255, 255, .08);
   --schatten: 0 8px 30px rgba(0, 0, 0, .35);
   --fokus: #b9a8ff;
+  --glas-dick: rgba(14, 16, 42, .72);
+  --chip: rgba(255, 255, 255, .09);
   color-scheme: dark;
 }
 
@@ -42,24 +47,16 @@ body {
 .mitte {
   position: fixed; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 0 16px; text-align: center; pointer-events: none;
+  padding: 0 16px var(--ablage-platz); text-align: center; pointer-events: none;
   text-shadow: 0 2px 18px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .3);
 }
 .uhr {
   display: flex; align-items: baseline; gap: .12em;
-  font-size: clamp(4.2rem, 19vw, 12rem); font-weight: 200; letter-spacing: -.03em; line-height: 1;
+  font-size: clamp(3.4rem, min(19vw, 30vh), 12rem); font-weight: 200; letter-spacing: -.03em; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .sek { font-size: .3em; font-weight: 300; opacity: .75; letter-spacing: 0; min-width: 1.3em; text-align: left; }
 .datum { margin: .5rem 0 0; font-size: clamp(1.1rem, 4.2vw, 1.9rem); font-weight: 400; letter-spacing: .01em; }
-.wetter { margin: .6rem 0 0; font-size: clamp(.95rem, 3.2vw, 1.2rem); font-weight: 400; }
-.zustand { margin: .35rem 0 0; max-width: 46rem; font-size: clamp(.8rem, 2.7vw, 1rem); font-weight: 400; line-height: 1.45; }
-/* Kleine Zeilen auf einer dezenten dunklen Glasfläche: lesbar auch vor der Sonne und am hellen Taghimmel */
-.wetter, .zustand {
-  padding: .12em .75em; border-radius: 999px; background: rgba(8, 12, 36, .32);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-}
-.wetter:empty, .zustand:empty { display: none; }
 
 /* Knöpfe oben */
 .leiste {
@@ -116,15 +113,54 @@ body {
 .hinweis { margin: 14px 0 0; font-size: .8rem; line-height: 1.45; color: var(--text-2); }
 .hinweis a { color: var(--akzent); }
 
-.fuss {
-  position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); text-align: center;
-  max-width: calc(100% - 24px); padding: .2em .8em; border-radius: 999px; background: rgba(8, 12, 36, .38);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-size: .75rem; text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-}
-.fuss, .fuss a { color: #fff; text-decoration: none; }
-.fuss a:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
   .knopf { transition: none; }
+}
+
+/* Untere Fläche: eine schwebende Glasfläche (dickes Material, damit Text auf hellem Taghimmel und vor der Sonne
+   lesbar bleibt), darin Wetterlage + Temperatur, Chips für Tagesphase und Sonnenzeiten, Quellen und Link zu Nimbus. */
+.ablage {
+  position: fixed; z-index: 2; left: 50%; transform: translateX(-50%);
+  bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  width: min(600px, calc(100vw - 24px));
+  display: grid; gap: 10px; padding: 14px 18px 12px; border-radius: 26px;
+  background: var(--glas-dick); color: var(--text);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
+}
+.ablage-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.wetter { margin: 0; font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em; }
+.temp { margin: 0; font-size: 1.75rem; font-weight: 300; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.chips li {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 11px;
+  border-radius: 999px; background: var(--chip); color: var(--text);
+  font-size: .8125rem; font-weight: 500; font-variant-numeric: tabular-nums;
+}
+.chips li:first-child { background: var(--akzent); color: #fff; }   /* Tagesphase hervorgehoben */
+:root[data-modus="dunkel"] .chips li:first-child { color: #0b0b10; }
+.chips svg { flex: none; color: var(--text-2); }
+.ablage-fuss {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px;
+  padding-top: 8px; border-top: 1px solid var(--glas-rand); font-size: .75rem; color: var(--text-2);
+}
+.ablage-fuss a { color: var(--text-2); text-decoration: none; }
+.ablage-fuss a:hover { color: var(--text); text-decoration: underline; }
+.ablage-fuss .weiter {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 28px;
+  color: var(--akzent); font-weight: 600;
+}
+.ablage-fuss .weiter:hover { color: var(--akzent); }
+@media (max-height: 520px) {
+  :root { --ablage-platz: 118px; }
+  .ablage { gap: 6px; padding: 10px 16px 8px; }
+  .datum { margin-top: .2rem; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ablage { background: var(--grund-fest, #f4f1fb); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root[data-modus="dunkel"] .ablage { background: #14162e; }
+}
+@media (prefers-contrast: more) {
+  .ablage { border: 1px solid var(--text); }
+  .ablage-fuss, .ablage-fuss a, .chips svg { color: var(--text); }
 }

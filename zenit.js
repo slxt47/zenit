@@ -503,17 +503,17 @@
     el('sek').textContent = teile.second;
     el('uhr').setAttribute('datetime', d.toISOString());
     el('datum').textContent = datFmt.format(d);
-    el('zustand').textContent = zustandText(d);
+    zustandZeigen(zustandTeile(d));
   }
   // Zweite Zeile: Tagesphase, Sonnenzeiten und Besonderes (Regenbogen, Polarlicht, Meteorstrom, Wind, Glätte, Frost)
   let zeitenCache = { schluessel: '', z: {} };
   const hm = (dt) => dt ? new Intl.DateTimeFormat('de-AT', { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(dt) : '';
-  function zustandText(d) {
+  function zustandTeile(d) {
     const ph = tagesphase(d), teile = [ph.name];
     const schluessel = `${zone}|${ort.lat}|${ort.lon}|${Math.floor(d / 6e4)}`;
     if (zeitenCache.schluessel !== schluessel) zeitenCache = { schluessel, z: sonnenzeiten(d, zone) };
     const z = zeitenCache.z;
-    if (z.auf || z.unter) teile.push(`Sonne ↑ ${hm(z.auf) || '–'} ↓ ${hm(z.unter) || '–'}`);
+    if (z.auf || z.unter) teile.push({ symbol: 'auf', text: hm(z.auf) || '–', sr: 'Sonnenaufgang' }, { symbol: 'unter', text: hm(z.unter) || '–', sr: 'Sonnenuntergang' });
     else teile.push(ph.h > 0 ? 'Polartag' : 'Polarnacht');
     if (!ph.steigt && z.daemmerEnde && d < z.daemmerEnde && ph.h < 6) teile.push(`hell bis ${hm(z.daemmerEnde)}`);
     if (besonderes.regenbogen) teile.push('Regenbogen');
@@ -526,14 +526,38 @@
       if (l.gefrierend) teile.push('Glättegefahr');
       else if (wetter.temp != null && wetter.temp <= 0 && !l.regen && !l.schnee) teile.push('Frost');
     }
-    return teile.join(' · ');
+    return teile.map((t) => (typeof t === 'string' ? { text: t } : t));
+  }
+  // Chips unten: nur neu bauen, wenn sich etwas geändert hat (sonst jede Sekunde neue Knoten für Screenreader)
+  const SYMBOL = {
+    auf: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 4v5m-3-2 3-3 3 3"/></svg>',
+    unter: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 9V4m-3 2 3 3 3-3"/></svg>',
+  };
+  let letzteChips = '';
+  function zustandZeigen(teile) {
+    const schluessel = teile.map((t) => `${t.symbol || ''}${t.text}`).join('|');
+    if (schluessel === letzteChips) return;
+    letzteChips = schluessel;
+    el('zustand').replaceChildren(...teile.map((t) => {
+      const li = document.createElement('li');
+      if (t.symbol) { li.insertAdjacentHTML('beforeend', SYMBOL[t.symbol]); li.classList.add('mit-symbol'); }
+      if (t.sr) { const s = document.createElement('span'); s.className = 'sr-only'; s.textContent = `${t.sr} `; li.append(s); }
+      li.append(t.text);
+      return li;
+    }));
+  }
+  // Wetterzeile: Lage links, Temperatur rechts; für Screenreader ein Satz mit Ort
+  function wetterZeigen(text, temp) {
+    el('wetter-text').textContent = text;
+    el('wetter-sr').textContent = `${ort.name}: ${temp != null ? `${temp} Grad, ` : ''}`;
+    el('temp').textContent = temp != null ? `${temp}°` : '';
   }
   function wetterText() {
     if (!wetter) return;
-    const t = wetter.temp != null ? `${Math.round(wetter.temp).toLocaleString('de-AT')} °C · ` : '';
+    const t = wetter.temp != null ? Math.round(wetter.temp).toLocaleString('de-AT') : null;
     const l = lage(wetter), mitGefrier = [56, 57, 66, 67].includes(wetter.code);
     const text = l.misch && !mitGefrier && !WMO[wetter.code]?.includes('Schneeregen') ? 'Schneeregen' : (WMO[wetter.code] || 'Wetter');
-    el('wetter').textContent = `${ort.name} · ${t}${text}`;
+    wetterZeigen(text, t);
     el('stand').textContent = wetter.stand ? ` · Stand ${wetter.stand}` : '';
   }
 
@@ -560,7 +584,7 @@
       uebernehmen(daten);
     } catch (e) {
       if (merk && merk.ort === schluessel) uebernehmen(merk.daten);
-      else { el('wetter').textContent = `${ort.name} · Wetter gerade nicht erreichbar`; }
+      else wetterZeigen('Wetter gerade nicht erreichbar', null);
     }
   }
   function uebernehmen(daten) {
@@ -603,7 +627,7 @@
     if (merken) schreiben(SPEICHER_ORT, ort);
     if (neu.zone) { zone = neu.zone; formate(); letzteUhr = ''; }
     el('ort-name').textContent = ort.name;
-    el('wetter').textContent = `${ort.name} · Wetter wird geladen …`;
+    wetterZeigen('Wetter wird geladen …', null);
     wetter = null; wolkenStand = ''; tropfen = []; flocken = []; koerner = [];
     wetterHolen(true); kpHolen();
   }

@@ -51,8 +51,9 @@ Die Anfragen an Open-Meteo und NOAA stellt der Browser selbst – der Server sie
 
 - Blitze bei Gewitter sind ein einzelner weicher Lichtwechsel alle 4–13 Sekunden, ohne Flackern (WCAG 2.3.1:
   höchstens 3 Blitze pro Sekunde). Bei „Bewegung reduzieren“ gibt es keine Blitze, Regen und Wolken stehen still.
-- Die kleinen Zeilen und die Fußzeile liegen auf einer dunklen Glasfläche, damit sie auch vor der Sonne und am hellen
-  Taghimmel lesbar bleiben.
+- Wetter, Tagesphase, Sonnenzeiten und Quellen liegen unten in einer schwebenden Glasfläche aus dickem Material
+  (hell/dunkel nach Schalter), damit sie auch vor der Sonne und am hellen Taghimmel lesbar bleiben. Die Mitte gehört
+  nur Uhr und Datum.
 - Polarlicht und Regenbogen stehen nur dann in der Textzeile, wenn sie im Bild auch zu sehen sind.
 
 ## Aufbau

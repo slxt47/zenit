@@ -11,8 +11,8 @@
   <script src="./modus.js?v=4"></script>
   <link rel="icon" href="./logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./logo-180.png">
-  <link rel="stylesheet" href="./zenit.css?v=5">
-  <script src="./zenit.js?v=5" defer></script>
+  <link rel="stylesheet" href="./zenit.css?v=6">
+  <script src="./zenit.js?v=6" defer></script>
 </head>
 <body>
   <canvas id="himmel" aria-hidden="true"></canvas>
@@ -30,9 +30,20 @@
     <h1 class="sr-only">Zenit – Himmel, Uhrzeit und Datum</h1>
     <time id="uhr" class="uhr" aria-live="off"><span id="hhmm">--:--</span><span id="sek" class="sek">--</span></time>
     <p id="datum" class="datum">&nbsp;</p>
-    <p id="wetter" class="wetter" aria-live="polite">Wetter wird geladen …</p>
-    <p id="zustand" class="zustand">&nbsp;</p>
   </main>
+
+  <!-- Untere Fläche: eine schwebende Glasfläche für Wetter, Tagesphase, Sonnenzeiten und Quellen -->
+  <section class="ablage glas" aria-label="Wetter und Sonne">
+    <div class="ablage-kopf">
+      <p id="wetter" class="wetter" aria-live="polite"><span id="wetter-sr" class="sr-only"></span><span id="wetter-text">Wetter wird geladen …</span></p>
+      <p id="temp" class="temp" aria-hidden="true"></p>
+    </div>
+    <ul id="zustand" class="chips" aria-label="Tagesphase und Sonne"></ul>
+    <div class="ablage-fuss">
+      <span><a href="https://open-meteo.com/" target="_blank" rel="noopener">Wetterdaten: Open-Meteo</a><span id="stand"></span></span>
+      <a class="weiter" href="https://weather.slxt.org/">Nimbus · 14 Tage<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>
+    </div>
+  </section>
 
   <div id="ort-fenster" class="fenster glas" hidden role="dialog" aria-modal="false" aria-labelledby="ort-titel">
     <div class="fenster-kopf">
@@ -60,8 +71,5 @@
       <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener">NOAA SWPC</a> geladen (ohne Ort). „Mein Standort“ fragt erst den Browser.</p>
   </div>
 
-  <footer class="fuss">
-    <a href="https://open-meteo.com/" target="_blank" rel="noopener">Wetterdaten: Open-Meteo.com</a><span id="stand"></span> · <a href="https://weather.slxt.org/">Nimbus: Wetter für 14 Tage</a>
-  </footer>
 </body>
 </html>
