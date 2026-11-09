@@ -64,6 +64,10 @@ kommen der gewählte Ort und Hell/Dunkel mit: `wechsel.js` (gleiche Datei in bei
 `?lat=&lon=&name=&zone=&modus=` an, die andere Seite übernimmt Ort und Modus, speichert den Ort und nimmt die Parameter
 wieder aus der Adresse.
 
+Übergang: Die Markierung im Umschalter gleitet zum anderen Segment, der Inhalt blendet in ~0,25 s in die Grundfarbe des
+Modus aus, die Kopfzeile bleibt dabei stehen. Die neue Seite startet in derselben Farbe und blendet auf. Über
+„Zurück“ geladene Seiten erscheinen ohne Schleier; bei „Bewegung reduzieren“ wird sofort gewechselt.
+
 ## Aufbau
 
 Keine Bibliotheken, kein Build – alles im `<canvas>`:

@@ -169,15 +169,58 @@ body {
 
 /* Umschalter Uhr ⇄ Wetter: wie eine Tab-Leiste mit zwei Bereichen (HIG Tab bars: „navigate among different sections“,
    kurze Ein-Wort-Beschriftungen mit Symbol), oben links bzw. mittig; gewählt = helle Fläche wie ein Segment */
-.ansichten { display: flex; gap: 2px; margin-right: auto; padding: 3px; border-radius: 999px; }
+.ansichten { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-right: auto; padding: 3px; border-radius: 999px; }
 .ansichten a {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 16px; border-radius: 999px;
+  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px; padding: 0 16px; border-radius: 999px;
   color: var(--text); font-size: .9375rem; font-weight: 500; text-decoration: none; transition: background .2s ease;
 }
 .ansichten a:hover { background: var(--chip); }
-.ansichten a[aria-current="page"] { background: var(--wahl); font-weight: 600; box-shadow: 0 1px 4px rgba(10, 14, 40, .18); }
+.ansichten a { transition: background .2s ease, color .2s ease; }
+.ansichten[data-aktiv="uhr"] a[data-ziel="uhr"], .ansichten[data-aktiv="wetter"] a[data-ziel="wetter"] { font-weight: 600; }   /* fett folgt der Markierung */
+.ansichten a[aria-current="page"]:hover { background: none; }
+/* Markierung als eigene Fläche: gleitet beim Wechsel zum anderen Segment (Segmente gleich breit, HIG) */
+.ansichten::before {
+  content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 4px); border-radius: 999px;
+  background: var(--wahl); box-shadow: 0 1px 4px rgba(10, 14, 40, .18);
+  transition: transform .3s cubic-bezier(.3, .7, .2, 1);
+}
+.ansichten[data-aktiv="wetter"]::before { transform: translateX(calc(100% + 2px)); }
 .ansichten a:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
 @media (min-width: 700px) { .ansichten { position: absolute; left: 50%; transform: translateX(-50%); margin: 0; } }
 @media (max-width: 440px) { .ansichten a { padding: 0 14px; } .ansichten svg { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ansichten a { transition: none; } }
 @media (max-width: 699px) { .leiste { gap: 8px; } #ort-name { max-width: 24vw; } .leiste .knopf:not(.rund) { padding: 0 12px; gap: 6px; } }
+
+/* Übergang Uhr ⇄ Wetter (wechsel.js): ausblenden in die Grundfarbe, neue Seite blendet daraus auf.
+   Nur Deckkraft und ein kleiner Weg nach oben; bei „Bewegung reduzieren“ sofort. */
+:root { --wechsel-farbe: #f4f1fb; }
+:root[data-modus="dunkel"] { --wechsel-farbe: #0b0e2a; }
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none;
+  background: var(--wechsel-farbe); opacity: 0; transition: opacity .24s ease-in;
+}
+html.wechsel-aus body::after { opacity: 1; }
+html.wechsel-ein body::after { animation: wechsel-ein .5s ease-out .05s both; }
+@keyframes wechsel-ein { from { opacity: 1; } to { opacity: 0; } }
+
+/* Beim Laden: Uhr blendet weich auf, die Glasfläche gleitet von unten herein */
+.mitte > * { animation: auftauchen .7s cubic-bezier(.2, .8, .2, 1) both; }
+.mitte .datum { animation-delay: .08s; }
+.ablage { animation: hereingleiten .6s cubic-bezier(.2, .8, .2, 1) .15s both; }
+.leiste { animation: auftauchen .5s ease-out both; }
+@keyframes auftauchen { from { opacity: 0; translate: 0 8px; } }
+@keyframes hereingleiten { from { opacity: 0; translate: 0 24px; } }
+
+/* Ort-Fenster blendet ein */
+.fenster { transition: opacity .2s ease, translate .25s cubic-bezier(.2, .8, .2, 1); }
+@starting-style { .fenster { opacity: 0; translate: 0 -6px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ansichten::before, .fenster { transition: none; }
+  .mitte > *, .ablage, .leiste, html.wechsel-ein body::after { animation: none; }
+}
+/* Kopfzeile bleibt beim Wechsel über dem Schleier: Umschalter und Knöpfe stehen auf beiden Seiten gleich da,
+   man sieht die Markierung gleiten und nur der Inhalt wechselt */
+html.wechsel-aus .leiste, html.wechsel-ein .leiste { z-index: 101; }
+html.wechsel-ein .leiste { animation: none; }
