@@ -3,7 +3,7 @@
 // - Wetter (Bewölkung, Regen, Schnee, Nebel, Gewitter, Wind) kommt von Open-Meteo (ohne Schlüssel), alle 10 Minuten.
 // - Blickrichtung: Süden (auf der Südhalbkugel Norden) – Osten links, Westen rechts, wie man draußen steht.
 // Testen/Vorschau per Adresse:  ?zeit=2026-06-21T21:15  ?wetter=61  ?wolken=80  ?zeitraffer=600  ?ort=Wien
-// (?wetter=68/69 = Schneeregen: Regen und Schnee gleichzeitig)
+// (?wetter=68/69 = Schneeregen: Regen und Schnee gleichzeitig)  ?kp=8 (Polarlicht)  ?wind=60 (km/h)
 (() => {
   'use strict';
 
@@ -55,6 +55,55 @@
     const inc = Math.atan2(sd * Math.sin(phi), m.dist - sd * Math.cos(phi));
     const ang = Math.atan2(Math.cos(s.dec) * Math.sin(s.ra - m.ra), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(s.ra - m.ra));
     return 0.5 + 0.5 * inc * (ang < 0 ? -1 : 1) / Math.PI;
+  }
+
+  // ---------- Dämmerung, Sonnenzeiten, Sternschnuppen-Ströme ----------
+  // Phasen nach Sonnenhöhe (steigend = Morgen): Nacht < −18° < astronomische < −12° < nautische < −6° < bürgerliche
+  // Dämmerung (−6…−4° blaue Stunde, −4…+6° goldene Stunde). Auf-/Untergang bei −0,833° (Lichtbrechung + Sonnenradius).
+  function tagesphase(d) {
+    const h = sonne(d, ort.lat, ort.lon).hoehe, steigt = sonne(new Date(d.valueOf() + 6e5), ort.lat, ort.lon).hoehe > h;
+    const M = steigt ? 'Morgen' : 'Abend';
+    let name;
+    if (Math.abs(h + 0.833) < 0.6) name = steigt ? 'Sonnenaufgang' : 'Sonnenuntergang';
+    else if (h >= 6) name = 'Tag';
+    else if (h >= -0.833) name = 'Goldene Stunde';
+    else if (h >= -4) name = `${M}dämmerung · Goldene Stunde`;
+    else if (h >= -6) name = `${M}dämmerung · Blaue Stunde`;
+    else if (h >= -12) name = `Nautische ${M}dämmerung`;
+    else if (h >= -18) name = `Astronomische ${M}dämmerung`;
+    else name = 'Nacht';
+    return { name, steigt, h };
+  }
+  // Sonnenauf-/-untergang und Beginn/Ende der bürgerlichen Dämmerung für den heutigen Tag am Ort (Zeitzone des Ortes)
+  function sonnenzeiten(d, zz) {
+    const f = new Intl.DateTimeFormat('en-CA', { timeZone: zz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    const heute = f.format(d), erg = {}, schritt = 6e5;
+    const ueber = (t, g) => sonne(new Date(t), ort.lat, ort.lon).hoehe - g;
+    for (const [g, auf, unter] of [[-0.833, 'auf', 'unter'], [-6, 'daemmerBeginn', 'daemmerEnde']]) {
+      let t0 = d.valueOf() - 30 * 36e5, v0 = ueber(t0, g);
+      for (let t = t0 + schritt; t <= d.valueOf() + 30 * 36e5; t += schritt) {
+        const v = ueber(t, g);
+        if ((v0 < 0) !== (v < 0)) {
+          let lo = t - schritt, hi = t;
+          for (let i = 0; i < 18; i++) { const m = (lo + hi) / 2; if ((ueber(lo, g) < 0) === (ueber(m, g) < 0)) lo = m; else hi = m; }
+          const z = new Date((lo + hi) / 2);
+          if (f.format(z) === heute) erg[v > 0 ? auf : unter] = z;
+        }
+        t0 = t; v0 = v;
+      }
+    }
+    return erg;
+  }
+  // Große Meteorströme (Maximum, ±2 Tage gilt als aktiv)
+  const STROEME = [['Quadrantiden', 1, 4], ['Lyriden', 4, 22], ['Eta-Aquariiden', 5, 6], ['Perseiden', 8, 12],
+    ['Orioniden', 10, 21], ['Leoniden', 11, 17], ['Geminiden', 12, 14], ['Ursiden', 12, 22]];
+  function stromAktiv(d, zz) {
+    const [j, m, t] = new Intl.DateTimeFormat('en-CA', { timeZone: zz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d).split('-').map(Number);
+    const heute = Date.UTC(j, m - 1, t);
+    for (const [name, mm, tt] of STROEME) {
+      for (const jj of [j - 1, j, j + 1]) if (Math.abs(heute - Date.UTC(jj, mm - 1, tt)) <= 2 * TAG_MS) return name;
+    }
+    return '';
   }
 
   // ---------- Farben ----------
@@ -110,23 +159,31 @@
     const regen = misch || [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(c) || (w.regen || 0) > 0;
     const schnee = misch || [71, 73, 75, 77, 85, 86].includes(c) || (w.schneefall || 0) > 0;
     const stark = { 68: .45, 69: .75, 51: .25, 53: .4, 55: .6, 56: .3, 57: .5, 61: .45, 63: .7, 65: 1, 66: .5, 67: .8, 80: .5, 81: .75, 82: 1, 95: .9, 96: 1, 99: 1, 71: .35, 73: .6, 75: 1, 77: .3, 85: .55, 86: .9 }[c] || 0;
-    let wolken = klemm((w.wolken ?? ({ 0: 0, 1: 20, 2: 50, 3: 95 }[c] ?? 90)) / 100);
-    if (regen || schnee) wolken = Math.max(wolken, 0.85);
+    const schauer = [80, 81, 82].includes(c);
+    let wolken = klemm((w.wolken ?? ({ 0: 0, 1: 20, 2: 50, 3: 95, 80: 60, 81: 70, 82: 80 }[c] ?? 90)) / 100);
+    if (regen || schnee) wolken = Math.max(wolken, schauer && !schnee ? 0.5 : 0.85);   // Schauer: Sonne kann durchkommen
     if (c === 45 || c === 48) wolken = Math.max(wolken, 0.7);
     return { wolken, regen, schnee, stark: Math.max(stark, klemm((w.niederschlag || 0) / 6)) * (regen || schnee ? 1 : 0),
-      misch: regen && schnee, nebel: c === 45 || c === 48, gewitter: c >= 95, niesel: c >= 51 && c <= 57, wind: w.wind || 0, windRichtung: w.windRichtung ?? 270 };
+      misch: regen && schnee, nebel: c === 45 || c === 48, gewitter: c >= 95, niesel: c >= 51 && c <= 57, schauer,
+      hagel: c === 96 || c === 99, gefrierend: [56, 57, 66, 67].includes(c),
+      wind: w.wind || 0, boeen: w.boeen || 0, windRichtung: w.windRichtung ?? 270 };
   }
 
   // ---------- Zustand ----------
   let ort = lesen(SPEICHER_ORT) || lesen('himmel-ort') || STANDARD;   // himmel-ort: alter Name bis 09.11.2026
   let wetter = null;          // { code, wolken, temp, niederschlag, wind, windRichtung, zone, zeit }
   let zone = 'Europe/Vienna';
+  let kpWert = q.has('kp') ? klemm(Number(q.get('kp')) || 0, 0, 9) : null;   // Polarlicht: planetarer Kp-Index (NOAA)
+  const besonderes = { regenbogen: false, polarlicht: 0, strom: '' };          // vom Zeichnen gesetzt, für die Textzeile
   const el = (id) => document.getElementById(id);
 
   // ---------- Zeichnen ----------
   const cv = el('himmel'), ctx = cv.getContext('2d');
   let B = 0, H = 0, dpr = 1;
-  let sterne = [], wolkenListe = [], tropfen = [], flocken = [], wolkenStand = '';
+  let sterne = [], wolkenListe = [], tropfen = [], flocken = [], koerner = [], meteore = [], wolkenStand = '';
+  // kleine Hilfsleinwand: darauf grob zeichnen, beim Hochskalieren wird es weich (Venusgürtel, Polarlicht)
+  const weichCv = document.createElement('canvas');
+  function weich(w, h) { weichCv.width = w; weichCv.height = h; const g = weichCv.getContext('2d'); g.clearRect(0, 0, w, h); return g; }
   function zufall(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
 
   function groesse() {
@@ -136,7 +193,7 @@
     for (let i = 0, n = Math.round(B * H / 2600); i < n; i++) {
       sterne.push({ x: r() * B, y: r() * H * 0.96, g: r() < 0.06 ? 1.4 : 0.35 + r() * 0.8, a: 0.35 + r() * 0.65, f: r() < 0.15, p: r() * 6.3 });
     }
-    wolkenStand = ''; tropfen = []; flocken = [];
+    wolkenStand = ''; tropfen = []; flocken = []; koerner = [];
   }
 
   // Bildschirm-x (0..1) für eine Kompassrichtung: Blick nach Süden (Südhalbkugel: Norden)
@@ -219,23 +276,79 @@
     const d = jetzt(), so = sonne(d, ort.lat, ort.lon), mo = mond(d, ort.lat, ort.lon);
     const l = lage(wetter || { code: 0, wolken: 0 });
     const sh = so.hoehe;
-    const regenDunkel = (l.regen || l.schnee) ? 0.72 - l.stark * 0.2 : 1;
+    const regenDunkel = (l.regen || l.schnee) ? (l.schauer && !l.schnee ? 0.86 : 0.72) - l.stark * 0.2 : 1;
     const grau = l.wolken > 0.6 ? (l.wolken - 0.6) / 0.4 * 0.92 : 0;
+    const steigt = sonne(new Date(d.valueOf() + 6e5), ort.lat, ort.lon).hoehe > sh;
 
-    // 1. Himmel
-    const [z, m, h] = himmelsfarben(sh).map((c) => vergrauen(c, grau, regenDunkel));
+    // 1. Himmel (Morgendämmerung etwas rosiger und kühler als die orange Abenddämmerung)
+    let farben = himmelsfarben(sh);
+    const morgen = steigt ? glatt(-12, -4, sh) * (1 - glatt(2, 8, sh)) : 0;
+    if (morgen > 0) farben = [mix(farben[0], hex('#2a3a7a'), morgen * 0.2), mix(farben[1], hex('#8a78b8'), morgen * 0.25), mix(farben[2], hex('#f39ab0'), morgen * 0.35)];
+    const [z, m, h] = farben.map((c) => vergrauen(c, grau, regenDunkel));
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, rgb(z)); g.addColorStop(0.55, rgb(m)); g.addColorStop(1, rgb(h));
     ctx.fillStyle = g; ctx.fillRect(0, 0, B, H);
 
     // 2. Sonnenschein am Horizont (Dämmerungsglühen) und Lichthof um die Sonne
-    const sx = bildX(so.richtung) * B, sy = bildY(sh), sicht = 1 - grau * 0.85, bedeckt = l.regen || l.schnee || l.nebel ? 1 : glatt(0.7, 0.97, l.wolken) * 0.9;
+    const sx = bildX(so.richtung) * B, sy = bildY(sh), sicht = 1 - grau * 0.85;
+    const bedeckt = (l.regen && !l.schauer) || l.schnee || l.nebel ? 1 : glatt(0.7, 0.97, l.wolken) * 0.9;
     if (sh > -12) {
       const tief = 1 - glatt(4, 25, sh), st = glatt(-12, -2, sh) * sicht;
       const farbe = mix(hex('#fff6dc'), hex('#ff8a4c'), tief);
       const rg = ctx.createRadialGradient(sx, HORIZONT(), 0, sx, HORIZONT(), Math.max(B, H) * (0.5 + tief * 0.4));
       rg.addColorStop(0, rgb(farbe, 0.55 * st * (0.4 + tief * 0.6))); rg.addColorStop(1, rgb(farbe, 0));
       ctx.fillStyle = rg; ctx.fillRect(0, 0, B, H);
+    }
+    // 2b. Dämmerung am Gegenhorizont: Erdschatten (dunkelblaues Band, steigt mit sinkender Sonne) und darüber der
+    //     rosa Venusgürtel – sichtbar etwa von +3° bis −8° Sonnenhöhe; dazu Purpurlicht hoch über der untergegangenen Sonne
+    const vg = glatt(-8.5, -2, sh) * (1 - glatt(0.5, 4, sh)) * sicht * (l.nebel ? 0.3 : 1);
+    if (vg > 0.01) {
+      const ax = bildX((so.richtung + 180) % 360) * B, hy = HORIZONT();
+      const schattenH = H * (0.03 + klemm(-sh / 8, 0, 1) * 0.13), guertelH = H * 0.17;
+      const band = ctx.createLinearGradient(0, hy - schattenH - guertelH, 0, hy);
+      const anteilS = schattenH / (schattenH + guertelH);
+      band.addColorStop(0, 'rgba(236,150,175,0)');
+      band.addColorStop(Math.max(0.05, 1 - anteilS - 0.25), `rgba(236,150,175,${0.42 * vg})`);
+      band.addColorStop(1 - anteilS, `rgba(214,140,170,${0.3 * vg})`);
+      band.addColorStop(Math.min(0.99, 1 - anteilS + 0.08), `rgba(52,62,112,${0.55 * vg})`);
+      band.addColorStop(1, `rgba(40,48,92,${0.7 * vg})`);
+      // auf kleiner Leinwand zeichnen, seitlich ausblenden (am stärksten gegenüber der Sonne), weich hochskalieren
+      const hoch = schattenH + guertelH + H * 0.03, g2 = weich(64, 48);
+      const vb = g2.createLinearGradient(0, 0, 0, 48 * (schattenH + guertelH) / hoch);
+      [[0, 'rgba(236,150,175,0)'], [Math.max(0.05, 1 - anteilS - 0.25), `rgba(236,150,175,${0.42 * vg})`], [1 - anteilS, `rgba(214,140,170,${0.3 * vg})`],
+        [Math.min(0.99, 1 - anteilS + 0.1), `rgba(52,62,112,${0.55 * vg})`], [1, `rgba(40,48,92,${0.7 * vg})`]].forEach(([o, f]) => vb.addColorStop(o, f));
+      g2.fillStyle = vb; g2.fillRect(0, 0, 64, 48);
+      g2.globalCompositeOperation = 'destination-in';
+      const mitte = klemm(ax / B, -0.5, 1.5) * 64, seit = g2.createLinearGradient(mitte - 64, 0, mitte + 64, 0);
+      seit.addColorStop(0, 'rgba(0,0,0,0.05)'); seit.addColorStop(0.5, 'rgba(0,0,0,1)'); seit.addColorStop(1, 'rgba(0,0,0,0.05)');
+      g2.fillStyle = seit; g2.fillRect(0, 0, 64, 48);
+      ctx.drawImage(weichCv, 0, hy - schattenH - guertelH, B, hoch);
+    }
+    const purpur = glatt(-1, -3.5, sh) * (1 - glatt(-5.5, -8, sh)) * sicht;
+    if (purpur > 0.01) {
+      const px = klemm(sx, -0.2 * B, 1.2 * B), py = HORIZONT() - H * 0.32;
+      const pg = ctx.createRadialGradient(px, py, 0, px, py, Math.max(B, H) * 0.42);
+      pg.addColorStop(0, `rgba(196,120,210,${0.26 * purpur})`); pg.addColorStop(1, 'rgba(196,120,210,0)');
+      ctx.fillStyle = pg; ctx.fillRect(0, 0, B, H);
+    }
+    // 2c. Polarlicht (nur wenn der Kp-Index für diese Breite reicht, dunkel und klar): Vorhänge oben am Himmel
+    const plNoetig = (66 - Math.abs(ort.lat)) / 2.6 + 1;
+    const pl = kpWert == null ? 0 : klemm((kpWert - plNoetig + 1) / 2) * glatt(-9, -15, sh) * (1 - l.wolken) * (l.nebel ? 0 : 1);
+    besonderes.polarlicht = pl;
+    if (pl > 0.02) {   // 120 schmale Strahlen auf kleiner Leinwand, hochskaliert = weiche, wehende Vorhänge
+      const t = ruhig.matches ? 0 : ms / 1000, W = 120, HH = 60, g2 = weich(W, HH);
+      for (let i = 0; i < W; i++) {
+        const u = i / W;
+        const welle = 0.5 + 0.5 * Math.sin(u * 9 + t * 0.35) * Math.sin(u * 23 - t * 0.6 + 1.3);
+        const st = pl * klemm(welle * 1.4 - 0.15);
+        if (st < 0.02) continue;
+        const unten = HH * (0.55 + 0.18 * Math.sin(u * 7 + t * 0.2) + 0.1 * Math.sin(u * 17 - t * 0.33));
+        const vg2 = g2.createLinearGradient(0, 0, 0, unten);
+        vg2.addColorStop(0, `rgba(220,70,150,${0.18 * st})`); vg2.addColorStop(0.65, `rgba(70,255,170,${0.32 * st})`);
+        vg2.addColorStop(0.92, `rgba(140,255,200,${0.5 * st})`); vg2.addColorStop(1, 'rgba(70,255,170,0)');
+        g2.fillStyle = vg2; g2.fillRect(i, 0, 1, unten);
+      }
+      ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.drawImage(weichCv, 0, 0, B, H * 0.62); ctx.restore();
     }
     // 3. Sterne (nur bei dunklem, klarem Himmel)
     const sternHell = glatt(-3, -14, sh) * (1 - l.wolken * 0.9) * (l.nebel ? 0.2 : 1);
@@ -249,6 +362,24 @@
       }
       ctx.globalAlpha = 1;
     }
+    // 3b. Sternschnuppen: nachts bei klarem Himmel ab und zu, während eines Meteorstroms (±2 Tage ums Maximum) oft
+    besonderes.strom = sternHell > 0.3 ? stromAktiv(d, zone) : '';
+    if (sternHell > 0.3 && !ruhig.matches) {
+      const rate = besonderes.strom ? 1 / 5 : 1 / 40;   // im Schnitt alle 5 s bzw. 40 s
+      if (Math.random() < rate * dt) {
+        const dir = Math.random() < 0.5 ? 1 : -1, w = (20 + Math.random() * 30) * RAD;
+        meteore.push({ x: Math.random() * B, y: Math.random() * H * 0.5, vx: Math.cos(w) * dir, vy: Math.sin(w), t: 0,
+          dauer: 0.5 + Math.random() * 0.6, len: 80 + Math.random() * 140, v: 500 + Math.random() * 500 });
+      }
+      for (const mt of meteore) {
+        mt.t += dt;
+        const k = mt.t / mt.dauer, a = sternHell * Math.sin(Math.PI * klemm(k)), hx = mt.x + mt.vx * mt.v * mt.t, hy = mt.y + mt.vy * mt.v * mt.t;
+        const sg = ctx.createLinearGradient(hx, hy, hx - mt.vx * mt.len, hy - mt.vy * mt.len);
+        sg.addColorStop(0, `rgba(255,255,255,${0.9 * a})`); sg.addColorStop(1, 'rgba(200,215,255,0)');
+        ctx.strokeStyle = sg; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx - mt.vx * mt.len, hy - mt.vy * mt.len); ctx.stroke();
+      }
+      meteore = meteore.filter((mt) => mt.t < mt.dauer);
+    } else meteore = [];
     // 4. Sonne
     const sxr = bildX(so.richtung);
     if (sh > -1.5 && sxr > -0.1 && sxr < 1.1) {
@@ -275,6 +406,23 @@
       if (w.x > B + 20) w.x = -w.b; else if (w.x < -w.b - 20) w.x = B;
       ctx.globalAlpha = w.a; ctx.drawImage(w.bild, w.x, w.y, w.b, w.h); ctx.globalAlpha = 1;
     }
+    // 6b. Regenbogen: Regen mit Sonne im Rücken (Sonne 0,5…42° hoch und nicht verdeckt) – Kreis mit 42° Radius um den
+    //     Gegenpunkt der Sonne (liegt so tief unter dem Horizont, wie die Sonne darüber steht), außen rot; Nebenbogen bei 51°
+    const gx = bildX((so.richtung + 180) % 360);
+    besonderes.regenbogen = l.regen && !l.schnee && !l.nebel && sh > 0.5 && sh < 42 && bedeckt < 0.6 && gx > -0.6 && gx < 1.6;
+    if (besonderes.regenbogen) {
+      const px = HORIZONT() * 0.95 / 70, cx = gx * B, cy = bildY(-sh);
+      const k = (1 - glatt(32, 42, sh)) * glatt(0.5, 3, sh) * (1 - bedeckt) * 0.5;
+      const BAND = ['#ff3b30', '#ff9500', '#ffd60a', '#34c759', '#32ade6', '#5e5ce6', '#bf5af2'];
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, B, HORIZONT()); ctx.clip(); ctx.globalCompositeOperation = 'screen';
+      ctx.lineWidth = 0.3 * px + 1;
+      BAND.forEach((f, i) => {
+        ctx.strokeStyle = f;
+        ctx.globalAlpha = k; ctx.beginPath(); ctx.arc(cx, cy, (42.2 - i * 0.3) * px, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = k * 0.35; ctx.beginPath(); ctx.arc(cx, cy, (50.2 + i * 0.4) * px, 0, Math.PI * 2); ctx.stroke();
+      });
+      ctx.restore(); ctx.globalAlpha = 1;
+    }
     // 7. Nebel
     if (l.nebel) {
       const ng = ctx.createLinearGradient(0, 0, 0, H), nf = vergrauen(mix(h, [200, 205, 212], 0.5), 1, sh > 0 ? 1 : 0.35);
@@ -297,11 +445,13 @@
     const sollSchnee = l.schnee ? Math.round(260 * (0.25 + l.stark) * flaeche * anteil) : 0;
     while (tropfen.length < sollRegen) tropfen.push(neuerTropfen(true));
     while (flocken.length < sollSchnee) flocken.push(neuerTropfen(true));
-    tropfen.length = Math.min(tropfen.length, sollRegen); flocken.length = Math.min(flocken.length, sollSchnee);
+    const sollHagel = l.hagel ? Math.round(90 * flaeche) : 0;
+    while (koerner.length < sollHagel) koerner.push(neuerTropfen(true));
+    tropfen.length = Math.min(tropfen.length, sollRegen); flocken.length = Math.min(flocken.length, sollSchnee); koerner.length = Math.min(koerner.length, sollHagel);
     const schraeg = klemm(l.wind / 60, 0, 0.6) * (Math.sin(((l.windRichtung + 180) % 360) * RAD) > 0 ? -1 : 1) * (ort.lat >= 0 ? 1 : -1);
     const bewegt = !ruhig.matches;
     if (tropfen.length) {
-      ctx.strokeStyle = 'rgba(205,215,235,.55)'; ctx.lineWidth = 1;
+      ctx.strokeStyle = l.gefrierend ? 'rgba(215,240,255,.75)' : 'rgba(205,215,235,.55)'; ctx.lineWidth = l.gefrierend ? 1.3 : 1;   // gefrierend: eisig
       ctx.beginPath();
       for (const t of tropfen) {
         const len = (l.niesel ? 7 : 16) * t.g, vy = (l.niesel ? 500 : 950) * t.v;
@@ -310,6 +460,14 @@
         ctx.moveTo(t.x, t.y); ctx.lineTo(t.x - schraeg * len, t.y - len);
       }
       ctx.stroke();
+    }
+    if (koerner.length) {   // Hagel: schnelle, harte weiße Körner
+      ctx.fillStyle = 'rgba(245,250,255,.95)';
+      for (const t of koerner) {
+        if (bewegt) { t.y += 1100 * t.v * dt; t.x += 1100 * t.v * schraeg * dt; }
+        if (t.y > H) Object.assign(t, neuerTropfen(false));
+        ctx.beginPath(); ctx.arc(t.x, t.y, 1.2 + t.g * 1.4, 0, Math.PI * 2); ctx.fill();
+      }
     }
     if (flocken.length) {
       ctx.fillStyle = 'rgba(255,255,255,.88)';
@@ -343,6 +501,30 @@
     el('sek').textContent = teile.second;
     el('uhr').setAttribute('datetime', d.toISOString());
     el('datum').textContent = datFmt.format(d);
+    el('zustand').textContent = zustandText(d);
+  }
+  // Zweite Zeile: Tagesphase, Sonnenzeiten und Besonderes (Regenbogen, Polarlicht, Meteorstrom, Wind, Glätte, Frost)
+  let zeitenCache = { schluessel: '', z: {} };
+  const hm = (dt) => dt ? new Intl.DateTimeFormat('de-AT', { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(dt) : '';
+  function zustandText(d) {
+    const ph = tagesphase(d), teile = [ph.name];
+    const schluessel = `${zone}|${ort.lat}|${ort.lon}|${Math.floor(d / 6e4)}`;
+    if (zeitenCache.schluessel !== schluessel) zeitenCache = { schluessel, z: sonnenzeiten(d, zone) };
+    const z = zeitenCache.z;
+    if (z.auf || z.unter) teile.push(`Sonne ↑ ${hm(z.auf) || '–'} ↓ ${hm(z.unter) || '–'}`);
+    else teile.push(ph.h > 0 ? 'Polartag' : 'Polarnacht');
+    if (!ph.steigt && z.daemmerEnde && d < z.daemmerEnde && ph.h < 6) teile.push(`hell bis ${hm(z.daemmerEnde)}`);
+    if (besonderes.regenbogen) teile.push('Regenbogen');
+    if (besonderes.polarlicht > 0.02) teile.push(`Polarlicht (Kp ${Math.round(kpWert)})`);
+    if (besonderes.strom) teile.push(`${besonderes.strom}: Sternschnuppen`);
+    if (wetter) {
+      const l = lage(wetter);
+      if (l.wind >= 50 || l.boeen >= 75) teile.push(`Stürmisch${l.boeen ? ` (Böen ${Math.round(l.boeen)} km/h)` : ''}`);
+      else if (l.wind >= 30 || l.boeen >= 50) teile.push('Windig');
+      if (l.gefrierend) teile.push('Glättegefahr');
+      else if (wetter.temp != null && wetter.temp <= 0 && !l.regen && !l.schnee) teile.push('Frost');
+    }
+    return teile.join(' · ');
   }
   function wetterText() {
     if (!wetter) return;
@@ -362,7 +544,7 @@
     }
     const url = 'https://api.open-meteo.com/v1/forecast?' + new URLSearchParams({
       latitude: ort.lat, longitude: ort.lon, timezone: 'auto',
-      current: 'temperature_2m,weather_code,cloud_cover,precipitation,rain,showers,snowfall,wind_speed_10m,wind_direction_10m',
+      current: 'temperature_2m,weather_code,cloud_cover,precipitation,rain,showers,snowfall,wind_speed_10m,wind_gusts_10m,wind_direction_10m',
     });
     try {
       const r = await fetch(url, { cache: 'no-store' });
@@ -370,7 +552,7 @@
       const j = await r.json(), c = j.current || {};
       const daten = { code: c.weather_code ?? 0, wolken: c.cloud_cover, temp: c.temperature_2m, niederschlag: c.precipitation,
         regen: (c.rain || 0) + (c.showers || 0), schneefall: c.snowfall || 0,
-        wind: c.wind_speed_10m, windRichtung: c.wind_direction_10m, zone: j.timezone,
+        wind: c.wind_speed_10m, boeen: c.wind_gusts_10m, windRichtung: c.wind_direction_10m, zone: j.timezone,
         stand: typeof c.time === 'string' ? c.time.slice(11, 16) : '' };   // Messzeit in Ortszeit
       schreiben(SPEICHER_WETTER, { ort: schluessel, geholt: Date.now(), daten });
       uebernehmen(daten);
@@ -384,9 +566,24 @@
     // Vorschau-Schalter aus der Adresse
     if (q.has('wetter')) { wetter.code = Number(q.get('wetter')) || 0; wetter.wolken = undefined; wetter.niederschlag = 0; wetter.regen = 0; wetter.schneefall = 0; }
     if (q.has('wolken')) wetter.wolken = klemm(Number(q.get('wolken')) || 0, 0, 100);
+    if (q.has('wind')) { wetter.wind = klemm(Number(q.get('wind')) || 0, 0, 200); wetter.boeen = wetter.wind * 1.5; }
     if (daten.zone && daten.zone !== zone) { zone = daten.zone; formate(); letzteUhr = ''; }
-    wolkenStand = ''; tropfen = []; flocken = [];
+    wolkenStand = ''; tropfen = []; flocken = []; koerner = [];
     wetterText(); uhr();
+  }
+
+  // Polarlicht: planetarer Kp-Index von NOAA SWPC (öffentlich, ohne Schlüssel), nur ab 40° Breite nötig, 15 min im Browser
+  async function kpHolen() {
+    if (q.has('kp') || Math.abs(ort.lat) < 40) return;
+    const merk = lesen('zenit-kp');
+    if (merk && Date.now() - merk.geholt < 15 * 60 * 1000) { kpWert = merk.kp; return; }
+    try {
+      const r = await fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json', { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      const liste = await r.json(), letzter = liste[liste.length - 1] || {};
+      const kp = Number(letzter.estimated_kp ?? letzter.kp_index);
+      if (Number.isFinite(kp)) { kpWert = kp; schreiben('zenit-kp', { geholt: Date.now(), kp }); }
+    } catch (e) { if (merk) kpWert = merk.kp; }
   }
 
   async function suchen(begriff) {
@@ -404,8 +601,8 @@
     if (neu.zone) { zone = neu.zone; formate(); letzteUhr = ''; }
     el('ort-name').textContent = ort.name;
     el('wetter').textContent = `${ort.name} · Wetter wird geladen …`;
-    wetter = null; wolkenStand = ''; tropfen = []; flocken = [];
-    wetterHolen(true);
+    wetter = null; wolkenStand = ''; tropfen = []; flocken = []; koerner = [];
+    wetterHolen(true); kpHolen();
   }
 
   // ---------- Ort-Fenster ----------
@@ -456,9 +653,9 @@
     if (q.get('ort')) {   // ?ort=Wien: erster Treffer, wird nicht gespeichert
       try { const [t] = await suchen(q.get('ort').slice(0, 80)); if (t) { ortSetzen(t, false); return; } } catch (e) { /* weiter mit gespeichertem Ort */ }
     }
-    wetterHolen(false);
+    wetterHolen(false); kpHolen();
   })();
-  setInterval(() => { if (!document.hidden) wetterHolen(false); }, 60 * 1000);
+  setInterval(() => { if (!document.hidden) { wetterHolen(false); kpHolen(); } }, 60 * 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { wetterHolen(false); uhr(); } });
 
   // Animation: flüssig mit requestAnimationFrame; bei „Bewegung reduzieren“ nur jede Sekunde neu zeichnen

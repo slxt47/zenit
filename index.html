@@ -11,8 +11,8 @@
   <script src="./modus.js?v=4"></script>
   <link rel="icon" href="./logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./logo-180.png">
-  <link rel="stylesheet" href="./zenit.css?v=3">
-  <script src="./zenit.js?v=3" defer></script>
+  <link rel="stylesheet" href="./zenit.css?v=4">
+  <script src="./zenit.js?v=4" defer></script>
 </head>
 <body>
   <canvas id="himmel" aria-hidden="true"></canvas>
@@ -31,6 +31,7 @@
     <time id="uhr" class="uhr" aria-live="off"><span id="hhmm">--:--</span><span id="sek" class="sek">--</span></time>
     <p id="datum" class="datum">&nbsp;</p>
     <p id="wetter" class="wetter" aria-live="polite">Wetter wird geladen …</p>
+    <p id="zustand" class="zustand">&nbsp;</p>
   </main>
 
   <div id="ort-fenster" class="fenster glas" hidden role="dialog" aria-modal="false" aria-labelledby="ort-titel">
@@ -55,7 +56,8 @@
     </div>
     <p class="hinweis">Der Ort bleibt nur in diesem Browser gespeichert. Wetter und Ortssuche kommen von
       <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (ohne Konto, ohne Cookies) –
-      dorthin geht nur die Position bzw. der Suchbegriff. „Mein Standort“ fragt erst den Browser.</p>
+      dorthin geht nur die Position bzw. der Suchbegriff. Für Polarlicht wird ab 40° Breite der Kp-Index von
+      <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener">NOAA SWPC</a> geladen (ohne Ort). „Mein Standort“ fragt erst den Browser.</p>
   </div>
 
   <footer class="fuss">

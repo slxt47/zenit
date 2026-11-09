@@ -53,6 +53,7 @@ body {
 .sek { font-size: .3em; font-weight: 300; opacity: .75; letter-spacing: 0; min-width: 1.3em; text-align: left; }
 .datum { margin: .5rem 0 0; font-size: clamp(1.1rem, 4.2vw, 1.9rem); font-weight: 400; letter-spacing: .01em; }
 .wetter { margin: .6rem 0 0; font-size: clamp(.95rem, 3.2vw, 1.2rem); font-weight: 400; opacity: .9; }
+.zustand { margin: .35rem 0 0; max-width: 46rem; font-size: clamp(.8rem, 2.7vw, 1rem); font-weight: 400; opacity: .82; line-height: 1.45; }
 
 /* Knöpfe oben */
 .leiste {

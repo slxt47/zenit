@@ -7,9 +7,12 @@ Live: **https://time.slxt.org**
 
 ## Was die Seite zeigt
 
-- **Sonnenstand:** Nacht, Dämmerung, goldene Stunde, Tag – die Himmelsfarben folgen der Sonnenhöhe.
+- **Sonnenstand:** Nacht, astronomische/nautische/bürgerliche Dämmerung, blaue und goldene Stunde, Tag – die Himmelsfarben folgen der Sonnenhöhe, morgens rosiger als abends.
+- **Dämmerung sichtbar:** Erdschatten und rosa Venusgürtel am Gegenhorizont, Purpurlicht über der untergegangenen Sonne.
+- **Zweite Zeile:** aktuelle Tagesphase, Sonnenauf- und -untergang, wie lange es noch hell ist.
 - **Mond und Sterne:** Mond an der richtigen Stelle mit seiner Phase, Sterne nur bei dunklem, klarem Himmel.
-- **Wetter:** Wolken (ziehen mit dem Wind), Regen, Niesel, Schnee, **Schneeregen** (beides gleichzeitig), Nebel, Gewitter mit Blitzen.
+- **Wetter:** Wolken (ziehen mit dem Wind), Regen, Niesel, Schnee, **Schneeregen** (beides gleichzeitig), Hagel, gefrierender Regen (Glättegefahr), Nebel, Gewitter mit Blitzen, Wind/Sturm mit Böen, Frost.
+- **Besonderes:** Regenbogen (Schauer mit Sonne im Rücken, 42° um den Gegenpunkt), Polarlicht (echter Kp-Index, abhängig von der Breite), Sternschnuppen – während Perseiden, Geminiden & Co. deutlich mehr.
 - **Uhr und Datum** in der Zeitzone des gewählten Ortes, auf Deutsch.
 - **Ort wählbar:** Standard Graz; Suche nach Städten oder „Mein Standort“. Die Wahl bleibt nur im Browser.
 - Hell/Dunkel-Schalter für Knöpfe und Fenster, „Bewegung reduzieren“ wird beachtet.
@@ -21,8 +24,10 @@ Live: **https://time.slxt.org**
 | Sonne, Mond, Mondphase | im Browser berechnet (Formeln wie [SunCalc](https://github.com/mourner/suncalc), BSD) |
 | Wetter | [Open-Meteo](https://open-meteo.com/) `forecast` → `current` (Temperatur, Wettercode, Bewölkung, Regen, Schauer, Schneefall, Wind) – frei, ohne Schlüssel. Open-Meteo rechnet mit Modellen nationaler Wetterdienste (u. a. DWD, ECMWF) und wählt automatisch das passende für den Ort |
 | Ortssuche | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) (GeoNames) |
+| Polarlicht | planetarer Kp-Index von [NOAA SWPC](https://www.swpc.noaa.gov/) (nur ab 40° Breite, 15 min im Browser gespeichert) |
+| Meteorströme | feste Liste der großen Ströme (Maximum ±2 Tage) |
 
-Die Anfragen an Open-Meteo stellt der Browser selbst – der Server sieht keine Wetterdaten und braucht keinen Schlüssel.
+Die Anfragen an Open-Meteo und NOAA stellt der Browser selbst – der Server sieht keine Wetterdaten und braucht keinen Schlüssel.
 
 ## Aktualisierung und Cache
 
@@ -39,6 +44,8 @@ Die Anfragen an Open-Meteo stellt der Browser selbst – der Server sieht keine 
 | `?zeitraffer=600` | Zeit läuft 600× schneller |
 | `?wetter=95` | WMO-Wettercode erzwingen (0 klar, 3 bedeckt, 45 Nebel, 63 Regen, 68 Schneeregen, 73 Schnee, 95 Gewitter) |
 | `?wolken=80` | Bewölkung in % |
+| `?kp=8` | Kp-Index für Polarlicht erzwingen |
+| `?wind=60` | Wind in km/h (Böen ×1,5) |
 
 ## Aufbau
 
