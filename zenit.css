@@ -52,8 +52,14 @@ body {
 }
 .sek { font-size: .3em; font-weight: 300; opacity: .75; letter-spacing: 0; min-width: 1.3em; text-align: left; }
 .datum { margin: .5rem 0 0; font-size: clamp(1.1rem, 4.2vw, 1.9rem); font-weight: 400; letter-spacing: .01em; }
-.wetter { margin: .6rem 0 0; font-size: clamp(.95rem, 3.2vw, 1.2rem); font-weight: 400; opacity: .9; }
-.zustand { margin: .35rem 0 0; max-width: 46rem; font-size: clamp(.8rem, 2.7vw, 1rem); font-weight: 400; opacity: .82; line-height: 1.45; }
+.wetter { margin: .6rem 0 0; font-size: clamp(.95rem, 3.2vw, 1.2rem); font-weight: 400; }
+.zustand { margin: .35rem 0 0; max-width: 46rem; font-size: clamp(.8rem, 2.7vw, 1rem); font-weight: 400; line-height: 1.45; }
+/* Kleine Zeilen auf einer dezenten dunklen Glasfläche: lesbar auch vor der Sonne und am hellen Taghimmel */
+.wetter, .zustand {
+  padding: .12em .75em; border-radius: 999px; background: rgba(8, 12, 36, .32);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.wetter:empty, .zustand:empty { display: none; }
 
 /* Knöpfe oben */
 .leiste {
@@ -111,10 +117,12 @@ body {
 .hinweis a { color: var(--akzent); }
 
 .fuss {
-  position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center;
-  font-size: .75rem; text-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); text-align: center;
+  max-width: calc(100% - 24px); padding: .2em .8em; border-radius: 999px; background: rgba(8, 12, 36, .38);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-size: .75rem; text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
 }
-.fuss, .fuss a { color: rgba(255, 255, 255, .8); text-decoration: none; }
+.fuss, .fuss a { color: #fff; text-decoration: none; }
 .fuss a:hover { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {

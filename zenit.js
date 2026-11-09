@@ -172,7 +172,7 @@
   // ---------- Zustand ----------
   let ort = lesen(SPEICHER_ORT) || lesen('himmel-ort') || STANDARD;   // himmel-ort: alter Name bis 09.11.2026
   let wetter = null;          // { code, wolken, temp, niederschlag, wind, windRichtung, zone, zeit }
-  let zone = 'Europe/Vienna';
+  let zone = ort.zone || 'Europe/Vienna';
   let kpWert = q.has('kp') ? klemm(Number(q.get('kp')) || 0, 0, 9) : null;   // Polarlicht: planetarer Kp-Index (NOAA)
   const besonderes = { regenbogen: false, polarlicht: 0, strom: '' };          // vom Zeichnen gesetzt, für die Textzeile
   const el = (id) => document.getElementById(id);
@@ -333,7 +333,7 @@
     }
     // 2c. Polarlicht (nur wenn der Kp-Index für diese Breite reicht, dunkel und klar): Vorhänge oben am Himmel
     const plNoetig = (66 - Math.abs(ort.lat)) / 2.6 + 1;
-    const pl = kpWert == null ? 0 : klemm((kpWert - plNoetig + 1) / 2) * glatt(-9, -15, sh) * (1 - l.wolken) * (l.nebel ? 0 : 1);
+    const pl = kpWert == null ? 0 : klemm((kpWert - plNoetig + 1) / 2) * glatt(-9, -15, sh) * (1 - l.wolken) * (l.nebel || l.regen || l.schnee ? 0 : 1);
     besonderes.polarlicht = pl;
     if (pl > 0.02) {   // 120 schmale Strahlen auf kleiner Leinwand, hochskaliert = weiche, wehende Vorhänge
       const t = ruhig.matches ? 0 : ms / 1000, W = 120, HH = 60, g2 = weich(W, HH);
@@ -409,10 +409,10 @@
     // 6b. Regenbogen: Regen mit Sonne im Rücken (Sonne 0,5…42° hoch und nicht verdeckt) – Kreis mit 42° Radius um den
     //     Gegenpunkt der Sonne (liegt so tief unter dem Horizont, wie die Sonne darüber steht), außen rot; Nebenbogen bei 51°
     const gx = bildX((so.richtung + 180) % 360);
-    besonderes.regenbogen = l.regen && !l.schnee && !l.nebel && sh > 0.5 && sh < 42 && bedeckt < 0.6 && gx > -0.6 && gx < 1.6;
+    const kBogen = (1 - glatt(32, 42, sh)) * glatt(0.5, 3, sh) * (1 - bedeckt) * 0.5;
+    besonderes.regenbogen = l.regen && !l.schnee && !l.nebel && sh > 0.5 && sh < 42 && bedeckt < 0.6 && gx > -0.6 && gx < 1.6 && kBogen > 0.05;
     if (besonderes.regenbogen) {
-      const px = HORIZONT() * 0.95 / 70, cx = gx * B, cy = bildY(-sh);
-      const k = (1 - glatt(32, 42, sh)) * glatt(0.5, 3, sh) * (1 - bedeckt) * 0.5;
+      const px = HORIZONT() * 0.95 / 70, cx = gx * B, cy = bildY(-sh), k = kBogen;
       const BAND = ['#ff3b30', '#ff9500', '#ffd60a', '#34c759', '#32ade6', '#5e5ce6', '#bf5af2'];
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, B, HORIZONT()); ctx.clip(); ctx.globalCompositeOperation = 'screen';
       ctx.lineWidth = 0.3 * px + 1;
@@ -433,9 +433,11 @@
     if (l.regen || l.schnee) niederschlag(l, dt);
     // 9. Gewitter: Blitze
     if (l.gewitter && !ruhig.matches) {
-      if (ms > naechsterBlitz) { blitzWert = 0.55 + Math.random() * 0.35; naechsterBlitz = ms + 4000 + Math.random() * 9000; }
-      blitzWert = Math.max(0, blitzWert - dt * (blitzWert > 0.3 ? 2.6 : 1.4));
-      el('blitz').style.opacity = (blitzWert * (Math.random() < 0.85 ? 1 : 0.4)).toFixed(3);
+      // Ein Blitz = einmal hell, dann weich aus. Kein Flackern von Bild zu Bild: schnell wechselnde Helligkeit auf der
+      // ganzen Fläche kann Anfälle auslösen (WCAG 2.3.1, höchstens 3 Blitze pro Sekunde). Abstand 4–13 s.
+      if (ms > naechsterBlitz) { blitzWert = 0.3 + Math.random() * 0.15; naechsterBlitz = ms + 4000 + Math.random() * 9000; }
+      blitzWert = Math.max(0, blitzWert - dt * 0.9);
+      el('blitz').style.opacity = blitzWert.toFixed(3);
     } else if (blitzWert) { blitzWert = 0; el('blitz').style.opacity = 0; }
   }
 
@@ -515,7 +517,7 @@
     else teile.push(ph.h > 0 ? 'Polartag' : 'Polarnacht');
     if (!ph.steigt && z.daemmerEnde && d < z.daemmerEnde && ph.h < 6) teile.push(`hell bis ${hm(z.daemmerEnde)}`);
     if (besonderes.regenbogen) teile.push('Regenbogen');
-    if (besonderes.polarlicht > 0.02) teile.push(`Polarlicht (Kp ${Math.round(kpWert)})`);
+    if (besonderes.polarlicht > 0.15) teile.push(`Polarlicht (Kp ${Math.round(kpWert)})`);
     if (besonderes.strom) teile.push(`${besonderes.strom}: Sternschnuppen`);
     if (wetter) {
       const l = lage(wetter);
@@ -568,6 +570,7 @@
     if (q.has('wolken')) wetter.wolken = klemm(Number(q.get('wolken')) || 0, 0, 100);
     if (q.has('wind')) { wetter.wind = klemm(Number(q.get('wind')) || 0, 0, 200); wetter.boeen = wetter.wind * 1.5; }
     if (daten.zone && daten.zone !== zone) { zone = daten.zone; formate(); letzteUhr = ''; }
+    if (daten.zone && ort.zone !== daten.zone && !q.get('ort')) { ort.zone = daten.zone; schreiben(SPEICHER_ORT, ort); }   // für den nächsten Start
     wolkenStand = ''; tropfen = []; flocken = []; koerner = [];
     wetterText(); uhr();
   }
@@ -596,7 +599,7 @@
   }
 
   function ortSetzen(neu, merken = true) {
-    ort = { name: String(neu.name).slice(0, 60), land: neu.land || '', lat: Number(neu.lat), lon: Number(neu.lon) };
+    ort = { name: String(neu.name).slice(0, 60), land: neu.land || '', lat: Number(neu.lat), lon: Number(neu.lon), zone: neu.zone || '' };
     if (merken) schreiben(SPEICHER_ORT, ort);
     if (neu.zone) { zone = neu.zone; formate(); letzteUhr = ''; }
     el('ort-name').textContent = ort.name;

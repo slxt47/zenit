@@ -47,6 +47,14 @@ Die Anfragen an Open-Meteo und NOAA stellt der Browser selbst – der Server sie
 | `?kp=8` | Kp-Index für Polarlicht erzwingen |
 | `?wind=60` | Wind in km/h (Böen ×1,5) |
 
+## Barrierefreiheit
+
+- Blitze bei Gewitter sind ein einzelner weicher Lichtwechsel alle 4–13 Sekunden, ohne Flackern (WCAG 2.3.1:
+  höchstens 3 Blitze pro Sekunde). Bei „Bewegung reduzieren“ gibt es keine Blitze, Regen und Wolken stehen still.
+- Die kleinen Zeilen und die Fußzeile liegen auf einer dunklen Glasfläche, damit sie auch vor der Sonne und am hellen
+  Taghimmel lesbar bleiben.
+- Polarlicht und Regenbogen stehen nur dann in der Textzeile, wenn sie im Bild auch zu sehen sind.
+
 ## Aufbau
 
 Keine Bibliotheken, kein Build – alles im `<canvas>`:
