@@ -1,0 +1,121 @@
+/* Zenit (time.slxt.org) – slxt-Design: Glas-Knöpfe, Violett→Blau. Hell/Dunkel betrifft nur Knöpfe und Fenster. */
+:root {
+  --glas: rgba(255, 255, 255, .62);
+  --glas-rand: rgba(255, 255, 255, .7);
+  --text: #1b1838;
+  --text-2: #4a4766;
+  --akzent: #6d4aff;
+  --akzent-2: #4f8bff;
+  --feld: rgba(255, 255, 255, .85);
+  --schatten: 0 8px 30px rgba(10, 14, 40, .18);
+  --fokus: #6d4aff;
+  color-scheme: light;
+}
+:root[data-modus="dunkel"] {
+  --glas: rgba(14, 16, 42, .55);
+  --glas-rand: rgba(255, 255, 255, .14);
+  --text: #f2f0ff;
+  --text-2: #c4c0e6;
+  --akzent: #9b85ff;
+  --akzent-2: #6fa0ff;
+  --feld: rgba(255, 255, 255, .08);
+  --schatten: 0 8px 30px rgba(0, 0, 0, .35);
+  --fokus: #b9a8ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: #0b0e2a;           /* bis der Himmel gezeichnet ist */
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#himmel { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#blitz { position: fixed; inset: 0; background: #eef2ff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Mitte: Uhr, Datum, Wetter */
+.mitte {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 16px; text-align: center; pointer-events: none;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .3);
+}
+.uhr {
+  display: flex; align-items: baseline; gap: .12em;
+  font-size: clamp(4.2rem, 19vw, 12rem); font-weight: 200; letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sek { font-size: .3em; font-weight: 300; opacity: .75; letter-spacing: 0; min-width: 1.3em; text-align: left; }
+.datum { margin: .5rem 0 0; font-size: clamp(1.1rem, 4.2vw, 1.9rem); font-weight: 400; letter-spacing: .01em; }
+.wetter { margin: .6rem 0 0; font-size: clamp(.95rem, 3.2vw, 1.2rem); font-weight: 400; opacity: .9; }
+
+/* Knöpfe oben */
+.leiste {
+  position: fixed; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 16px;
+  display: flex; justify-content: flex-end; gap: 10px; z-index: 2;
+}
+.glas {
+  background: var(--glas); color: var(--text);
+  border: 1px solid var(--glas-rand); box-shadow: var(--schatten);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+}
+.knopf {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
+  border-radius: 999px; font: inherit; font-size: .95rem; font-weight: 500; cursor: pointer;
+  color: var(--text); background: var(--feld); border: 1px solid var(--glas-rand);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.leiste .knopf { background: var(--glas); }
+.knopf:hover { box-shadow: 0 10px 34px rgba(10, 14, 40, .28); }
+.knopf:active { transform: scale(.96); }
+.knopf:focus-visible, input:focus-visible, .treffer button:focus-visible, a:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.knopf.rund { width: 44px; padding: 0; justify-content: center; }
+.knopf.klein { width: 36px; min-height: 36px; background: transparent; border-color: transparent; box-shadow: none; }
+.knopf.voll { background: linear-gradient(135deg, #6d4aff, #3f63e0);   /* fest: Weiß darauf ≥ 4.5:1 */
+  color: #fff; border-color: transparent; }
+#ort-name { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Ort-Fenster */
+.fenster {
+  position: fixed; z-index: 3; top: calc(max(14px, env(safe-area-inset-top)) + 56px); right: 16px;
+  width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 100px); overflow: auto;
+  padding: 16px 18px 18px; border-radius: 22px;
+}
+.fenster[hidden] { display: none; }
+.fenster-kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.fenster h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.suche { display: flex; gap: 8px; }
+.suche input {
+  flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 1rem;
+  color: var(--text); background: var(--feld); border: 1px solid var(--glas-rand);
+}
+.suche input::placeholder { color: var(--text-2); }
+.treffer { list-style: none; margin: 10px 0 0; padding: 0; }
+.treffer:empty { display: none; }
+.treffer li + li { margin-top: 4px; }
+.treffer button {
+  width: 100%; text-align: left; padding: 10px 12px; border-radius: 12px; border: 0; cursor: pointer;
+  background: transparent; color: var(--text); font: inherit;
+}
+.treffer button:hover { background: var(--feld); }
+.treffer small { display: block; color: var(--text-2); font-size: .82rem; margin-top: 2px; }
+.treffer .leer { padding: 8px 12px; color: var(--text-2); }
+.aktionen { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.hinweis { margin: 14px 0 0; font-size: .8rem; line-height: 1.45; color: var(--text-2); }
+.hinweis a { color: var(--akzent); }
+
+.fuss {
+  position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center;
+  font-size: .75rem; text-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+}
+.fuss, .fuss a { color: rgba(255, 255, 255, .8); text-decoration: none; }
+.fuss a:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .knopf { transition: none; }
+}
