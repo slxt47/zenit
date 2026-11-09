@@ -676,7 +676,13 @@
   groesse();
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(groesse, 150); });
   el('ort-name').textContent = ort.name;
+  // Umschalter Uhr ⇄ Wetter: Ort (und über wechsel.js den Modus) mitnehmen
+  const wechsel = window.slxtWechsel;
+  const wechselLink = (e) => { if (wechsel) e.currentTarget.href = wechsel.link(e.currentTarget.dataset.wechsel, ort); };
+  document.querySelectorAll('[data-wechsel]').forEach((l) => ['pointerdown', 'focus', 'click'].forEach((t) => l.addEventListener(t, wechselLink)));
   (async () => {
+    if (wechsel && wechsel.ort) { ortSetzen(wechsel.ort, true); wechsel.aufraeumen(); return; }   // vom Wetter herübergekommen
+    if (wechsel) wechsel.aufraeumen();
     if (q.get('ort')) {   // ?ort=Wien: erster Treffer, wird nicht gespeichert
       try { const [t] = await suchen(q.get('ort').slice(0, 80)); if (t) { ortSetzen(t, false); return; } } catch (e) { /* weiter mit gespeichertem Ort */ }
     }

@@ -56,6 +56,14 @@ Die Anfragen an Open-Meteo und NOAA stellt der Browser selbst – der Server sie
   nur Uhr und Datum.
 - Polarlicht und Regenbogen stehen nur dann in der Textzeile, wenn sie im Bild auch zu sehen sind.
 
+## Uhr ⇄ Wetter
+
+Zenit (Uhr, time.slxt.org) und Nimbus (Wetter, weather.slxt.org) sind zwei Bereiche einer App. Oben sitzt auf beiden
+Seiten derselbe Umschalter **Uhr | Wetter** (wie eine Tab-Leiste nach Apple HIG, am Handy nur Text). Beim Wechsel
+kommen der gewählte Ort und Hell/Dunkel mit: `wechsel.js` (gleiche Datei in beiden Repos) hängt
+`?lat=&lon=&name=&zone=&modus=` an, die andere Seite übernimmt Ort und Modus, speichert den Ort und nimmt die Parameter
+wieder aus der Adresse.
+
 ## Aufbau
 
 Keine Bibliotheken, kein Build – alles im `<canvas>`:
@@ -65,6 +73,7 @@ Keine Bibliotheken, kein Build – alles im `<canvas>`:
 | `index.html` | Seite, Uhr in der Mitte, Ort-Fenster |
 | `zenit.js` | Astronomie, Himmelsfarben, Wolken, Niederschlag, Wetter, Uhr, Ortssuche |
 | `zenit.css` | Aussehen (Glas-Knöpfe, hell/dunkel) |
+| `wechsel.js` | Umschalter Uhr ⇄ Wetter: Ort und Modus an die andere Seite übergeben |
 | `modus.js` | Hell/Dunkel-Schalter (gemeinsam mit den anderen slxt-Seiten) |
 | `logo.svg`, `logo-180.png` | Logo |
 
