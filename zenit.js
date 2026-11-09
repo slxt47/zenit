@@ -558,7 +558,7 @@
     const l = lage(wetter), mitGefrier = [56, 57, 66, 67].includes(wetter.code);
     const text = l.misch && !mitGefrier && !WMO[wetter.code]?.includes('Schneeregen') ? 'Schneeregen' : (WMO[wetter.code] || 'Wetter');
     wetterZeigen(text, t);
-    el('stand').textContent = wetter.stand ? ` · Stand ${wetter.stand}` : '';
+    el('stand').textContent = wetter.stand ? `Stand ${wetter.stand}` : '';
   }
 
   // ---------- Daten holen ----------

@@ -142,17 +142,7 @@ body {
 .chips li:first-child { background: var(--akzent); color: #fff; }   /* Tagesphase hervorgehoben */
 :root[data-modus="dunkel"] .chips li:first-child { color: #0b0b10; }
 .chips svg { flex: none; color: var(--text-2); }
-.ablage-fuss {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px;
-  padding-top: 8px; border-top: 1px solid var(--glas-rand); font-size: .75rem; color: var(--text-2);
-}
-.ablage-fuss a { color: var(--text-2); text-decoration: none; }
-.ablage-fuss a:hover { color: var(--text); text-decoration: underline; }
-.ablage-fuss .weiter {
-  display: inline-flex; align-items: center; gap: 2px; min-height: 28px;
-  color: var(--akzent); font-weight: 600;
-}
-.ablage-fuss .weiter:hover { color: var(--akzent); }
+.ablage .fuss-leiste { padding-top: 8px; border-top: 1px solid var(--glas-rand); }
 @media (max-height: 520px) {
   :root { --ablage-platz: 118px; }
   .ablage { gap: 6px; padding: 10px 16px 8px; }
@@ -164,7 +154,7 @@ body {
 }
 @media (prefers-contrast: more) {
   .ablage { border: 1px solid var(--text); }
-  .ablage-fuss, .ablage-fuss a, .chips svg { color: var(--text); }
+  .chips svg { color: var(--text); }
 }
 
 /* Umschalter Uhr ⇄ Wetter: wie eine Tab-Leiste mit zwei Bereichen (HIG Tab bars: „navigate among different sections“,
@@ -224,3 +214,20 @@ html.wechsel-ein body::after { animation: wechsel-ein .5s ease-out .05s both; }
    man sieht die Markierung gleiten und nur der Inhalt wechselt */
 html.wechsel-aus .leiste, html.wechsel-ein .leiste { z-index: 101; }
 html.wechsel-ein .leiste { animation: none; }
+
+/* Fußzeile – auf Zenit und Nimbus gleich: Pillen-Knöpfe für Quellen und slxt.org, rechts der Stand */
+.fuss-leiste { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.pillen { display: flex; flex-wrap: wrap; gap: 6px; }
+.pille {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 12px; border-radius: 999px;
+  background: var(--chip); color: var(--text); font-size: .8125rem; font-weight: 500; text-decoration: none;
+  transition: background .2s ease, transform .15s ease;
+}
+.pille:hover { background: var(--feld-hover, rgba(109, 74, 255, .14)); text-decoration: none; }
+.pille:active { transform: scale(.96); }
+.pille:focus-visible { outline: 3px solid var(--fokus); outline-offset: 2px; }
+.pille svg { flex: none; color: var(--text-2); }
+.stand { color: var(--text-2); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.stand:empty { display: none; }
+@media (prefers-contrast: more) { .pille { outline: 1px solid currentColor; } .stand, .pille svg { color: var(--text); } }
+@media (prefers-reduced-motion: reduce) { .pille { transition: none; } }

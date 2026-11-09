@@ -12,8 +12,8 @@
   <script src="./wechsel.js?v=3"></script>
   <link rel="icon" href="./logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./logo-180.png">
-  <link rel="stylesheet" href="./zenit.css?v=12">
-  <script src="./zenit.js?v=7" defer></script>
+  <link rel="stylesheet" href="./zenit.css?v=13">
+  <script src="./zenit.js?v=8" defer></script>
 </head>
 <body>
   <canvas id="himmel" aria-hidden="true"></canvas>
@@ -44,8 +44,13 @@
       <p id="temp" class="temp" aria-hidden="true"></p>
     </div>
     <ul id="zustand" class="chips" aria-label="Tagesphase und Sonne"></ul>
-    <div class="ablage-fuss">
-      <span><a href="https://open-meteo.com/" target="_blank" rel="noopener">Wetterdaten: Open-Meteo</a><span id="stand"></span></span>
+    <div class="fuss-leiste">
+      <nav class="pillen" aria-label="Quellen und mehr">
+        <a class="pille" href="https://open-meteo.com/" target="_blank" rel="noopener">Wetterdaten: Open-Meteo<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16 8M9 8h7v7"/></svg><span class="sr-only"> (neuer Tab)</span></a>
+        <a class="pille" href="https://creativecommons.org/licenses/by/4.0/deed.de" target="_blank" rel="noopener license">CC BY 4.0<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16 8M9 8h7v7"/></svg><span class="sr-only"> (neuer Tab)</span></a>
+        <a class="pille" href="https://slxt.org/">slxt.org</a>
+      </nav>
+      <span class="stand" id="stand"></span>
     </div>
   </section>
 
