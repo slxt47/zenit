@@ -5,8 +5,27 @@
 (() => {
   'use strict';
   const q = new URLSearchParams(location.search);
+  const M = window.slxtModus;
+
+  // Gemeinsamer Hell/Dunkel-Modus für Uhr und Wetter: ein Cookie für alle *.slxt.org-Seiten (localStorage ist je Adresse
+  // getrennt). Nur Zenit und Nimbus lesen/schreiben ihn; reine Einstellung, kein Tracking, 1 Jahr gültig.
+  const KEKS = 'slxt-modus';
+  const keksLesen = () => { const t = document.cookie.match(/(?:^|; )slxt-modus=(hell|dunkel)/); return t ? t[1] : null; };
+  const keksSchreiben = (wert) => {
+    const domain = /(^|\.)slxt\.org$/.test(location.hostname) ? '; Domain=slxt.org' : '';
+    document.cookie = `${KEKS}=${wert}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}${domain}`;
+  };
+  const uebernehmen = (wert) => { if ((wert === 'hell' || wert === 'dunkel') && M && M.get() !== wert) M.setzen(wert); };
+
   const m = q.get('modus');
-  if ((m === 'hell' || m === 'dunkel') && window.slxtModus && window.slxtModus.get() !== m) window.slxtModus.setzen(m);
+  uebernehmen(m === 'hell' || m === 'dunkel' ? m : keksLesen());   // Umschalter-Link vor Cookie, beides vor dem ersten Zeichnen
+  if (M) {
+    if (keksLesen() !== M.get()) keksSchreiben(M.get());
+    addEventListener('modus', (e) => keksSchreiben(e.detail));          // Schalter hier gedrückt → für die andere Seite merken
+    // Tab wieder sichtbar (z. B. Modus im anderen Tab geändert) → nachziehen
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) uebernehmen(keksLesen()); });
+    addEventListener('pageshow', () => uebernehmen(keksLesen()));
+  }
   // Kam die Seite über den Umschalter? Dann startet sie in der Grundfarbe und blendet auf (Klasse vor dem ersten Zeichnen)
   const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (q.has('modus')) document.documentElement.classList.add('wechsel-ein');
